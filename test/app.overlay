@@ -1,0 +1,22 @@
+/* Smart Spoon Custom PCB Overlay */
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+
+        led0: led_0 {
+            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
+            label = "SMART_SPOON_LED_0";
+        };
+
+        led1: led_1 {
+            gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+            label = "SMART_SPOON_LED_1";
+        };
+    };
+
+    aliases {
+        led0 = &led0;
+        led1 = &led1;
+    };
+};
