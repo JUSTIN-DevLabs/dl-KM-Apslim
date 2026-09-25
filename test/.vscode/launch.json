@@ -1,0 +1,12 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "nrf-debug",
+			"request": "launch",
+			"name": "Launch test/build/test",
+			"config": "${workspaceFolder}/build/test",
+			"inferiors": []
+		}
+	]
+}

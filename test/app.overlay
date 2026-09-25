@@ -1,22 +1,203 @@
-/* Smart Spoon Custom PCB Overlay */
+/*
+ * APSLIM Custom PCB Overlay
+ * nRF Connect SDK v3.4.1
+ */
 
 / {
+    /* =====================================================
+     * DEBUG LED
+     * DEBUG LED1 : P0.31
+     * ===================================================== */
+
     leds {
         compatible = "gpio-leds";
 
-        led0: led_0 {
-            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
-            label = "SMART_SPOON_LED_0";
-        };
-
-        led1: led_1 {
-            gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
-            label = "SMART_SPOON_LED_1";
+        debug_led1: debug_led_1 {
+            gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
+            label = "APSLIM_DEBUG_LED1";
         };
     };
 
+
+    /* =====================================================
+     * BUTTON
+     * PWR_SW_STATE : P0.26
+     * ===================================================== */
+
+    buttons {
+        compatible = "gpio-keys";
+
+        user_btn: user_button {
+            gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+            label = "APSLIM_BUTTON";
+        };
+    };
+
+
+    /* =====================================================
+     * ADC
+     *
+     * Battery ADC : P0.02 / AIN0
+     * Spoon ADC   : P0.03 / AIN1
+     * ===================================================== */
+
+    zephyr,user {
+        io-channels =
+            <&adc 0>,
+            <&adc 1>;
+
+        io-channel-names =
+            "battery_adc",
+            "spoon_adc";
+    };
+
+
+    /* =====================================================
+     * ALIASES
+     * ===================================================== */
+
     aliases {
-        led0 = &led0;
-        led1 = &led1;
+        led0 = &debug_led1;
+        sw0  = &user_btn;
+    };
+};
+
+
+/* =========================================================
+ * SAADC
+ * ========================================================= */
+
+&adc {
+    status = "okay";
+
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+
+    /* Battery ADC
+     * P0.02 / AIN0
+     */
+    channel@0 {
+        reg = <0>;
+
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,input-positive = <NRF_SAADC_AIN0>;
+        zephyr,resolution = <12>;
+    };
+
+
+    /* Spoon ADC
+     * P0.03 / AIN1
+     */
+    channel@1 {
+        reg = <1>;
+
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,input-positive = <NRF_SAADC_AIN1>;
+        zephyr,resolution = <12>;
+    };
+};
+
+
+/* =========================================================
+ * I2C0
+ *
+ * LIS2DH12
+ *
+ * SDA : P0.06
+ * SCL : P0.08
+ * ========================================================= */
+
+&i2c0 {
+    status = "okay";
+
+    pinctrl-0 = <&apslim_i2c0_default>;
+    pinctrl-1 = <&apslim_i2c0_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    clock-frequency = <100000>;
+};
+
+
+/* =========================================================
+ * I2C1
+ *
+ * FDC1004
+ *
+ * SDA : P1.00
+ * SCL : P0.25
+ * ========================================================= */
+
+&i2c1 {
+    status = "okay";
+
+    pinctrl-0 = <&apslim_i2c1_default>;
+    pinctrl-1 = <&apslim_i2c1_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    clock-frequency = <100000>;
+};
+
+
+/* =========================================================
+ * PINCTRL
+ * ========================================================= */
+
+&pinctrl {
+
+    /* LIS2DH12 */
+    apslim_i2c0_default: apslim_i2c0_default {
+        group1 {
+            psels =
+                <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                <NRF_PSEL(TWIM_SCL, 0, 8)>;
+        };
+    };
+
+    apslim_i2c0_sleep: apslim_i2c0_sleep {
+        group1 {
+            psels =
+                <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                <NRF_PSEL(TWIM_SCL, 0, 8)>;
+
+            low-power-enable;
+        };
+    };
+
+
+    /* FDC1004 */
+    apslim_i2c1_default: apslim_i2c1_default {
+        group1 {
+            psels =
+                <NRF_PSEL(TWIM_SDA, 1, 0)>,
+                <NRF_PSEL(TWIM_SCL, 0, 25)>;
+        };
+    };
+
+    apslim_i2c1_sleep: apslim_i2c1_sleep {
+        group1 {
+            psels =
+                <NRF_PSEL(TWIM_SDA, 1, 0)>,
+                <NRF_PSEL(TWIM_SCL, 0, 25)>;
+
+            low-power-enable;
+        };
+    };
+};
+
+
+/* =========================================================
+ * USB CDC
+ * ========================================================= */
+
+&zephyr_udc0 {
+    status = "okay";
+
+    usb_cdc: usb_cdc {
+        compatible = "zephyr,cdc-acm-uart";
     };
 };
