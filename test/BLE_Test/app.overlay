@@ -1,0 +1,30 @@
+/* Smart Spoon Custom PCB Overlay */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+    leds {
+        compatible = "gpio-leds";
+
+        led0: led_0 {
+            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
+            label = "SMART_SPOON_DEBUG_LED";
+        };
+
+        led1: led_1 {
+            gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+            label = "SMART_SPOON_BLUE_LED";
+        };
+
+        led_green: led_green {
+            gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
+            label = "SMART_SPOON_GREEN_LED";
+        };
+    };
+
+    aliases {
+        led0 = &led0;
+        led1 = &led1;
+        led-green = &led_green;
+    };
+};
