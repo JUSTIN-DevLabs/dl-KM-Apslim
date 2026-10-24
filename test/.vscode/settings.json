@@ -1,5 +1,6 @@
 {
-    "nrf-connect.debugging.bindings": {
-        "${workspaceFolder}/build/test": "Launch test/build/test"
-    }
+    "cmake.sourceDirectory": "D:/WorkSpace/04_JUSTIN-DevLabs/01_DEVLABS/01_KM/03_Source/01_git/dl-KM-Apslim/test/Hardware_BringUp_Test",
+    "nrf-connect.applications": [
+        "${workspaceFolder}\\BLE_Test"
+    ]
 }

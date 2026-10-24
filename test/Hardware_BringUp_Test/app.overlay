@@ -1,85 +1,76 @@
 /*
- * APSLIM Custom PCB Overlay
- * nRF Connect SDK v3.4.1
+ * APSLIM Rev.A - Minimal Hardware Bring-up Overlay
+ * Target: Raytac MDBT50Q-DB-40 / nRF52840
+ * SDK: nRF Connect SDK v3.4.1
+ *
+ * main.c: UNCHANGED
+ * Keep: USB CDC, I2C0/1, GPIO (LED/Button), battery/spoon ADC.
+ * Disable Raytac board peripherals that may conflict with these pins.
  */
 
-/ {
-    /* =====================================================
-     * DEBUG LED
-     * DEBUG LED1 : P0.31
-     * ===================================================== */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/adc/nrf-saadc.h>
+#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
 
+/ {
+    chosen {
+        /* Use USB CDC instead of the development board's HW UART. */
+        zephyr,console = &usb_cdc;
+        zephyr,shell-uart = &usb_cdc;
+    };
+
+    /* GPIO: DEBUG LED P0.31 (active-low), BUTTON P0.26. */
     leds {
         compatible = "gpio-leds";
 
-        debug_led1: debug_led_1 {
+        apslim_debug_led1: apslim_debug_led_1 {
             gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
             label = "APSLIM_DEBUG_LED1";
         };
     };
 
-
-    /* =====================================================
-     * BUTTON
-     * PWR_SW_STATE : P0.26
-     * ===================================================== */
-
     buttons {
         compatible = "gpio-keys";
 
-        user_btn: user_button {
+        apslim_user_btn: apslim_user_button {
             gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
             label = "APSLIM_BUTTON";
         };
     };
 
-
-    /* =====================================================
-     * ADC
-     *
-     * Battery ADC : P0.02 / AIN0
-     * Spoon ADC   : P0.03 / AIN1
-     * ===================================================== */
-
+    /* Required by the unchanged main.c: DT_PATH(zephyr_user). */
     zephyr,user {
-        io-channels =
-            <&adc 0>,
-            <&adc 1>;
-
-        io-channel-names =
-            "battery_adc",
-            "spoon_adc";
+        io-channels = <&adc 0>, <&adc 1>;
+        io-channel-names = "battery_adc", "spoon_adc";
     };
 
-
-    /* =====================================================
-     * ALIASES
-     * ===================================================== */
-
     aliases {
-        led0 = &debug_led1;
-        sw0  = &user_btn;
+        led0 = &apslim_debug_led1;
+        sw0 = &apslim_user_btn;
     };
 };
 
+/* Disable unused board functions and potential pin/peripheral conflicts. */
+&uart0 { status = "disabled"; }; /* Raytac P0.06/P0.08 -> LIS I2C0 */
+&uart1 { status = "disabled"; };
+&spi0  { status = "disabled"; }; /* Shares serial instance 0 with I2C0 */
+&spi1  { status = "disabled"; }; /* Shares serial instance 1 with I2C1 */
+&pwm0  { status = "disabled"; };
+&qspi  { status = "disabled"; };
+&button3 { status = "disabled"; }; /* Raytac SW4 P0.25 -> FDC SCL */
 
-/* =========================================================
- * SAADC
- * ========================================================= */
+&gpio0 { status = "okay"; };
+&gpio1 { status = "okay"; };
 
+/* Minimal ADC definition, retained ONLY because main.c uses battery_adc. */
 &adc {
     status = "okay";
-
     #address-cells = <1>;
     #size-cells = <0>;
 
-
-    /* Battery ADC
-     * P0.02 / AIN0
-     */
     channel@0 {
         reg = <0>;
-
         zephyr,gain = "ADC_GAIN_1_6";
         zephyr,reference = "ADC_REF_INTERNAL";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
@@ -87,13 +78,8 @@
         zephyr,resolution = <12>;
     };
 
-
-    /* Spoon ADC
-     * P0.03 / AIN1
-     */
     channel@1 {
         reg = <1>;
-
         zephyr,gain = "ADC_GAIN_1_6";
         zephyr,reference = "ADC_REF_INTERNAL";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
@@ -102,98 +88,52 @@
     };
 };
 
-
-/* =========================================================
- * I2C0
- *
- * LIS2DH12
- *
- * SDA : P0.06
- * SCL : P0.08
- * ========================================================= */
-
+/* LIS2DTW12: I2C0, SDA=P0.06, SCL=P0.08, 100 kHz. */
 &i2c0 {
+    compatible = "nordic,nrf-twim";
     status = "okay";
-
     pinctrl-0 = <&apslim_i2c0_default>;
     pinctrl-1 = <&apslim_i2c0_sleep>;
     pinctrl-names = "default", "sleep";
-
     clock-frequency = <100000>;
 };
 
+/* FDC1004: I2C1, SDA=P1.00, SCL=P0.25, 100 kHz. */
 
-/* =========================================================
- * I2C1
- *
- * FDC1004
- *
- * SDA : P1.00
- * SCL : P0.25
- * ========================================================= */
-
-&i2c1 {
-    status = "okay";
-
-    pinctrl-0 = <&apslim_i2c1_default>;
-    pinctrl-1 = <&apslim_i2c1_sleep>;
-    pinctrl-names = "default", "sleep";
-
-    clock-frequency = <100000>;
-};
-
-
-/* =========================================================
- * PINCTRL
- * ========================================================= */
 
 &pinctrl {
-
-    /* LIS2DH12 */
     apslim_i2c0_default: apslim_i2c0_default {
         group1 {
-            psels =
-                <NRF_PSEL(TWIM_SDA, 0, 6)>,
-                <NRF_PSEL(TWIM_SCL, 0, 8)>;
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 8)>;
         };
     };
 
     apslim_i2c0_sleep: apslim_i2c0_sleep {
         group1 {
-            psels =
-                <NRF_PSEL(TWIM_SDA, 0, 6)>,
-                <NRF_PSEL(TWIM_SCL, 0, 8)>;
-
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 8)>;
             low-power-enable;
         };
     };
 
-
-    /* FDC1004 */
     apslim_i2c1_default: apslim_i2c1_default {
         group1 {
-            psels =
-                <NRF_PSEL(TWIM_SDA, 1, 0)>,
-                <NRF_PSEL(TWIM_SCL, 0, 25)>;
+            psels = <NRF_PSEL(TWIM_SDA, 1, 0)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 25)>;
         };
     };
 
     apslim_i2c1_sleep: apslim_i2c1_sleep {
         group1 {
-            psels =
-                <NRF_PSEL(TWIM_SDA, 1, 0)>,
-                <NRF_PSEL(TWIM_SCL, 0, 25)>;
-
+            psels = <NRF_PSEL(TWIM_SDA, 1, 0)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 25)>;
             low-power-enable;
         };
     };
 };
 
-
-/* =========================================================
- * USB CDC
- * ========================================================= */
-
+/* USB CDC virtual COM used directly by main.c. */
 &zephyr_udc0 {
     status = "okay";
 

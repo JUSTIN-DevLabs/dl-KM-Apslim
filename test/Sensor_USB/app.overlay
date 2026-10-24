@@ -1,0 +1,152 @@
+/* Apslim Rev.A on raytac_mdbt50q_db_40/nrf52840. */
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/adc/nrf-saadc.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/pinctrl/nrf-pinctrl.h>
+
+/ {
+    chosen {
+        zephyr,console = &usb_cdc;
+        zephyr,shell-uart = &usb_cdc;
+    };
+
+    apslim_outputs {
+        compatible = "gpio-leds";
+
+        debug_led_1: debug_led_1 {
+            gpios = <&gpio0 31 GPIO_ACTIVE_LOW>;
+        };
+
+        debug_led_2: debug_led_2 {
+            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
+        };
+
+        meal_led_green: meal_led_green {
+            gpios = <&gpio0 11 GPIO_ACTIVE_LOW>;
+        };
+
+        meal_led_blue: meal_led_blue {
+            gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+        };
+
+        /* GPIO descriptor only: CONFIG_LED is not enabled. */
+        power_hold: power_hold {
+            gpios = <&gpio0 5 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+    apslim_buttons {
+        compatible = "gpio-keys";
+
+        power_button: power_button {
+            gpios = <&gpio0 26 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+    zephyr,user {
+        io-channels = <&adc 0>;
+        io-channel-names = "battery";
+    };
+
+    aliases {
+        debug-led-1 = &debug_led_1;
+        debug-led-2 = &debug_led_2;
+        meal-led-green = &meal_led_green;
+        meal-led-blue = &meal_led_blue;
+        power-hold = &power_hold;
+        power-button = &power_button;
+    };
+};
+
+/* Release pins and serial instances used by the Raytac development board. */
+&uart0 { status = "disabled"; };
+&uart1 { status = "disabled"; };
+&spi0 { status = "disabled"; };
+&spi1 { status = "disabled"; };
+&spi2 { status = "disabled"; };
+&spi3 { status = "disabled"; };
+&pwm0 { status = "disabled"; };
+&qspi { status = "disabled"; };
+&button0 { status = "disabled"; };
+&button1 { status = "disabled"; };
+&button2 { status = "disabled"; };
+&button3 { status = "disabled"; };
+
+&gpio0 { status = "okay"; };
+&gpio1 { status = "okay"; };
+
+&adc {
+    status = "okay";
+    #address-cells = <1>;
+    #size-cells = <0>;
+
+    channel@0 {
+        reg = <0>;
+        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,reference = "ADC_REF_INTERNAL";
+        /* R8/R10 are high impedance; allow SAADC acquisition time. */
+        zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 40)>;
+        zephyr,input-positive = <NRF_SAADC_AIN0>;
+        zephyr,resolution = <12>;
+    };
+};
+
+/* The only application hardware timer. 16 MHz / 2^4 = 1 MHz. */
+&timer2 {
+    status = "okay";
+    prescaler = <4>;
+};
+
+&i2c0 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    pinctrl-0 = <&apslim_accel_default>;
+    pinctrl-1 = <&apslim_accel_sleep>;
+    pinctrl-names = "default", "sleep";
+    clock-frequency = <100000>;
+};
+
+&i2c1 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    pinctrl-0 = <&apslim_fdc_default>;
+    pinctrl-1 = <&apslim_fdc_sleep>;
+    pinctrl-names = "default", "sleep";
+    clock-frequency = <100000>;
+};
+
+&pinctrl {
+    apslim_accel_default: apslim_accel_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>, <NRF_PSEL(TWIM_SCL, 0, 8)>;
+        };
+    };
+
+    apslim_accel_sleep: apslim_accel_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 6)>, <NRF_PSEL(TWIM_SCL, 0, 8)>;
+            low-power-enable;
+        };
+    };
+
+    apslim_fdc_default: apslim_fdc_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 0)>, <NRF_PSEL(TWIM_SCL, 0, 25)>;
+        };
+    };
+
+    apslim_fdc_sleep: apslim_fdc_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 0)>, <NRF_PSEL(TWIM_SCL, 0, 25)>;
+            low-power-enable;
+        };
+    };
+};
+
+&zephyr_udc0 {
+    status = "okay";
+
+    usb_cdc: cdc_acm_uart0 {
+        compatible = "zephyr,cdc-acm-uart";
+    };
+};
