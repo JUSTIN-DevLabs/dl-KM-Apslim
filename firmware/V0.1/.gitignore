@@ -1,0 +1,7 @@
+build*/
+.west/
+*.o
+*.elf
+*.hex
+*.bin
+__pycache__/
